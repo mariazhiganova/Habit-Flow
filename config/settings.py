@@ -9,8 +9,12 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+
 import os
+from datetime import timedelta
 from pathlib import Path
+
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -25,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True if os.environ.get('DEBUG') == 'True' else False
+DEBUG = True if os.environ.get("DEBUG") == "True" else False
 
 ALLOWED_HOSTS = []
 
@@ -57,6 +61,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -82,13 +88,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.getenv('DATABASE_NAME'),
-        'USER': os.getenv('DATABASE_USER'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-        'HOST': os.getenv('DATABASE_HOST'),
-        'PORT': os.getenv('DATABASE_PORT', default='5432'),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": os.getenv("DATABASE_NAME"),
+        "USER": os.getenv("DATABASE_USER"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD"),
+        "HOST": os.getenv("DATABASE_HOST"),
+        "PORT": os.getenv("DATABASE_PORT", default="5432"),
     }
 }
 
@@ -115,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -131,4 +137,46 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = 'users.CustomUser'
+AUTH_USER_MODEL = "users.CustomUser"
+
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_URL = "https://api.telegram.org/bot"
+
+CELERY_BROKER_URL = "redis://localhost:6379"
+
+CELERY_RESULT_BACKEND = "redis://localhost:6379"
+
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    "task-name": {
+        "task": "habits.tasks.send_habits_notification",
+        "schedule": crontab(minute="*"),
+    },
+}
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_ALL_ORIGINS = False
