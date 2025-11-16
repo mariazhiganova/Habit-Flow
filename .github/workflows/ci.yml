@@ -121,7 +121,6 @@ jobs:
           host: ${{ secrets.SERVER_IP }}      # IP адрес сервера из защищенных переменных
           username: maria                     # Имя пользователя на сервере
           key: ${{ secrets.SSH_KEY }} # Приватный SSH ключ для доступа
-          key_type: "ed25519"
           script: |  # Команды, которые выполнятся на сервере
             cd /home/maria/Habit-Flow    # Переход в папку проекта
             git pull
