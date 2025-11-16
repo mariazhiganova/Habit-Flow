@@ -42,7 +42,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'  # Версия Python (должна совпадать с проектом)
+          python-version: '3.13'  # Версия Python (должна совпадать с проектом)
 
       # Шаг 3: Ожидание готовности PostgreSQL
       - name: Wait for PostgreSQL
