@@ -1,0 +1,66 @@
+version: '3.9'  # Версия формата docker-compose
+
+services:
+  web:
+    build: .  # Собрать образ из Dockerfile в текущей директории
+    command: >
+      bash -c "python manage.py collectstatic --noinput && 
+               python manage.py migrate && 
+               gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+      # collectstatic - собрать статические файлы
+      # migrate - применить миграции БД  
+      # gunicorn - запуск продакшн-сервера
+    env_file:
+      - .env  # Загрузить переменные окружения из файла .env
+    volumes:
+      - .:/app  # Синхронизировать текущую директорию с /app в контейнере
+      - staticfiles:/app/staticfiles  # Общее хранилище для статических файлов
+    expose:
+      - "8000"  # Открыть порт 8000 для других контейнеров (не для хоста)
+    depends_on:
+      - db  # Ждать запуска базы данных
+      - redis  # Ждать запуска Redis
+
+  db:
+    image: postgres:15  # Использовать официальный образ PostgreSQL версии 15
+    env_file:
+      - .env  # Переменные окружения для настройки БД
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Постоянное хранилище для данных БД
+    expose:
+      - "5432"  # Открыть порт 5432 для других контейнеров
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]  # Проверка готовности БД
+      interval: 30s  # Интервал проверки - 30 секунд
+      timeout: 10s   # Таймаут проверки - 10 секунд
+      retries: 5     # Количество попыток
+
+  redis:
+    image: redis:7  # Использовать официальный образ Redis версии 7
+    expose:
+      - "6379"  # Открыть порт 6379 для других контейнеров
+
+  celery:
+    build: .  # Собрать образ из Dockerfile в текущей директории
+    command: celery -A config worker -l INFO  # Запустить Celery worker
+    env_file:
+      - .env  # Загрузить переменные окружения из файла .env
+    volumes:
+      - .:/app  # Синхронизировать текущую директорию с /app в контейнере
+    depends_on:
+      - db  # Ждать запуска базы данных
+      - redis  # Ждать запуска Redis
+
+  nginx:
+    image: nginx:stable-alpine # Скачиваем готовый образ nginx
+    ports:
+      - "80:80"  # Пробросить порт 80 хоста на порт 80 контейнера
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf # Взять настройки nginx из проекта и отнести в контейнер
+      - staticfiles:/app/staticfiles  # Общее хранилище статических файлов
+    depends_on:
+      - web  # Ждать запуска Django-приложения
+
+volumes:
+  postgres_data:  # Объявить постоянное хранилище для данных PostgreSQL
+  staticfiles:  # Объявить общее хранилище для статических файлов
